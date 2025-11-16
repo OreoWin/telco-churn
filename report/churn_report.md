@@ -83,25 +83,17 @@ We evaluate two variants:
 The baseline model uses default hyperparameters.  
 This provides a reference to evaluate how much tuning improves performance.
 
-### **Python Code (Baseline)**
+## 5.2 XGBoost Hyperparameter Tuning (GridSearchCV)
 
-```python
-import xgboost as xgb
-from sklearn.metrics import roc_auc_score
+Tuning aims to balance bias–variance tradeoff and improve generalization.
 
-xgb_model = xgb.XGBClassifier(
-    eval_metric="logloss", 
-    use_label_encoder=False
-)
-xgb_model.fit(X_train, y_train)
+## 5.3 Model Evaluation 
 
-xgb_prob = xgb_model.predict_proba(X_test)[:, 1]
-print("XGBoost Baseline AUC:", roc_auc_score(y_test, xgb_prob))
-
+## 5.4 Model Interpretation 
 
 ---
 
-# 6. Support Vector Machine (SVM)
+# 6. Support Vector Machine (SVM) Modelling 
 
 SVM is a margin-based classifier that uses kernel transformations to identify nonlinear patterns in the churn data.  
 Because SVM is highly sensitive to magnitudes of features, **standardization is required** to ensure balanced treatment across variables.
@@ -114,12 +106,31 @@ We evaluate:
 
 ## 6.1 Baseline SVM
 
-The baseline SVM uses an RBF kernel with default hyperparameters.  
-This gives us a starting point to later assess how tuning improves performance.
+SVM commonly offers several kernel choices:
+1. Linear Kernel
+Uses a straight-line (or hyperplane) boundary.
+It works well when the data is approximately linearly separable or when the feature space is already high-dimensional after one-hot encoding. However, it cannot capture nonlinear churn patterns created by interactions between customer attributes.
+2. Polynomial Kernel
+Allows curved boundaries of polynomial form. Although more flexible than the linear kernel, it often introduces unnecessary complexity and tends to overfit medium-sized datasets such as churn data.
+3. RBF (Radial Basis Function) Kernel
+The RBF kernel maps points into a much higher-dimensional space where complex relationships become linearly separable. It produces smooth, nonlinear boundaries that adapt well to real-world structures in the data. RBF is generally the default and most robust choice for classification tasks involving heterogeneous or nonlinear feature interactions.
 
+From EDA, we observed that customer churn patterns are rarely linearly separable. After one-hot encoding, the feature space becomes high-dimensional, and churn behavior depends on nonlinear interactions such as tenure × contract type × tech support status. The RBF kernel is well-suited to this scenario because it:
+- captures nonlinear relationships between features
+- handles complex customer behavior patterns
+- avoids overfitting better than polynomial kernels
+- consistently performs well in practical churn prediction tasks
+For these reasons, we select the RBF kernel as the primary kernel for our SVM model.
 
+## 6.2 Hyperparameter Tuning for SVM (GridSearchCV)
 
+## 6.3 Model Evaluation 
 
+## 6.4 Model Interpretation 
 
+---
+
+# 7. Model Comparison 
+![Model Comparison](figures/model_comparison.png)
 
 
