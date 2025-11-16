@@ -131,7 +131,7 @@ For these reasons, we select the RBF kernel as the primary kernel for our SVM mo
 ---
 
 ## 7. Model Comparison 
-![Model Comparison](report/figures/model_comparison.png)
+![Model Comparison](figures/model_comparison.png)
 
 
 
