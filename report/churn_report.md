@@ -1,5 +1,5 @@
 # Telco Customer Churn Analysis  
-**Rebecca Li | UCLA MASDS**  
+**Rebecca Li | UCLA Department of Statistics & Data Science**  
 
 # 1. Introduction
 
