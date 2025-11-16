@@ -1,0 +1,18 @@
+# R
+.Rhistory
+.Rproj.user
+.RData
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# data/
