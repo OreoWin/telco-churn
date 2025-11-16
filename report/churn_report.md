@@ -1,9 +1,5 @@
 # Telco Customer Churn Analysis  
-**Exploratory Data Analysis (R) + Machine Learning Modelling (Python)**  
-
-
-
-Rebecca Li | UCLA MASDS
+**Rebecca Li | UCLA MASDS**  
 
 # 1. Introduction
 
