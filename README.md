@@ -15,10 +15,7 @@ This project analyzes churn patterns in a Telco subscription dataset using:
 
 # 2. Data Overview
 
-The
- [TELCO Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data)
-
- contains 7,043 customer records and 21 variables describing customer demographics, service subscriptions, contractual attributes, monthly billing, and a binary churn label. The dataset includes both numerical features (e.g., tenure, MonthlyCharges, TotalCharges) and multiple categorical variables related to phone, internet, and streaming services. 
+The [TELCO Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data) contains 7,043 customer records and 21 variables describing customer demographics, service subscriptions, contractual attributes, monthly billing, and a binary churn label. The dataset includes both numerical features (e.g., tenure, MonthlyCharges, TotalCharges) and multiple categorical variables related to phone, internet, and streaming services. 
 
 Target variable: **Churn (Yes/No)**.
 
