@@ -19,16 +19,78 @@ The [TELCO Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/tel
 
 Target variable: **Churn (Yes/No)**.
 
+## 2.1 Data Cleaning 
+
+We began by loading the raw Telco Customer Churn dataset and performing an initial inspection using glimpse() and summary() to understand variable types, missing values, and overall data quality. A missing-data check confirmed that the dataset contained 11 missing values, all located in the TotalCharges column. Because the proportion of missing rows was extremely small relative to the full dataset (11 out of 7,043 records), we chose a deletion-based approach rather than imputation to avoid introducing noise or bias.
+
+```R
+telco_raw = read.csv("C:/Users/lenovo/Desktop/Churn Project/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+glimpse(telco_raw)
+summary(telco_raw)
 
 
-# 3. Exploratory Data Analysis (R)
+any(is.na(telco_raw)) #check for missing value 
+names(telco_raw)[colSums(is.na(telco_raw)) > 0] #target missing value 
+sum(is.na(telco_raw$TotalCharges)) #11
 
-EDA was conducted in **R (tidyverse + ggplot2)** to understand customer behavior and identify early indicators of churn.  
+telco = telco_raw %>%
+  mutate(SeniorCitizen = if_else(SeniorCitizen == 1, "Yes","No"))%>%  #covert numerical variables to binary
+  na.omit() #delete records with NA since there's only 11 records 
+
+
+numeric_vars <- telco %>%
+  select(where(is.numeric)) %>%
+  names()
+
+cat_vars <- telco %>%
+  select(-all_of(numeric_vars)) %>%
+  names()
+
+
+#churn rate 
+churn_summary <- telco %>%
+  count(Churn) %>%
+  mutate(prop = n / sum(n))
+```
+To clean the dataset, we first converted the SeniorCitizen field from a numeric indicator (0/1) into a human-readable categorical variable (“No”, “Yes”). Afterward, we separated variables into two groups—numeric features and categorical features—to facilitate later preprocessing, encoding, and exploratory analysis.
+
+## 2.2 Data Preparation 
+
+To prepare for the modelling stage, we started from the cleaned R output and loaded telco_cleaned.csv into Python. We defined the feature matrix X by dropping the target labels (Churn, churn_binary) and the identifier column (customerID), and used churn_binary as the binary target y. Categorical features were detected via their object dtype and one-hot encoded using pd.get_dummies(..., drop_first=True) to avoid dummy-variable traps. In total, 16 categorical columns were expanded into dummy variables, resulting in 30 features after encoding.
+
+```python
+df = pd.read_csv('telco_cleaned.csv')
+print(df.head())
+
+X = df.drop(["Churn","churn_binary", "customerID"], axis=1)  
+y = df["churn_binary"]  
+
+# Encode categorical features 
+categorical_cols = X.select_dtypes(include=["object"]).columns
+X_encoded = pd.get_dummies(X, columns=categorical_cols, drop_first=True)
+print(f"\nEncoded {len(categorical_cols)} categorical columns") #16
+print(f"Total features after encoding: {X_encoded.shape[1]}") #30
+
+#train/test split (BEFORE scaling to avoid data leakage)
+X_train, X_test, y_train, y_test = train_test_split(
+    X_encoded, y, test_size=0.2, random_state=42, stratify=y
+)
+
+#scaling for SVM and Logistic Regression (fit on train, transform test)
+numeric_cols = X_train.select_dtypes(include=["int64", "float64"]).columns
+scaler = StandardScaler()
+X_train_scaled = X_train.copy()
+X_test_scaled = X_test.copy()
+X_train_scaled[numeric_cols] = scaler.fit_transform(X_train[numeric_cols])
+X_test_scaled[numeric_cols] = scaler.transform(X_test[numeric_cols])
+```
+Next, we split the data into training and test sets using an 80/20 split with stratify=y to preserve the original churn proportion in both sets. To prepare inputs for models that are sensitive to feature scales (Logistic Regression and SVM), we identified numeric columns and applied StandardScaler. Importantly, the scaler was fit only on the training data and then applied to both X_train and X_test, ensuring there was no data leakage from the test set into the training process. XGBoost, which is scale-invariant, was trained on the raw encoded features without standardization.
+
+# 3. Exploratory Data Analysis (EDA)
+
+EDA was conducted in R (tidyverse + ggplot2) to understand customer behavior and identify early indicators of churn.  
 Key findings highlight imbalances in churn rates, differences in distributions of numeric variables, and a clear separation between churn and non-churn groups.
-
-
-
-
 
 ## 3.1 Churn Distribution
 
