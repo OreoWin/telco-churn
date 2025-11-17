@@ -471,11 +471,31 @@ In our plot, the churn and non-churn groups show partial overlap, illustrating w
 
 
 ## 7. Model Comparison 
+Across all models evaluated, the tuned XGBoost model achieved the highest AUC (0.839), making it the strongest overall performer. AUC is the most reliable metric for churn prediction because it measures ranking quality — how well the model separates churn vs. non-churn customers — and it remains robust under class imbalance. Since churn is only about 26.6% of the dataset, relying on accuracy alone would be misleading; a model could achieve over 70% accuracy simply by predicting “no churn” all the time.
 ![Model Comparison](report/figures/model_comparison.png)
 
+Although some other models, including SVM and baseline XGBoost, show slightly higher accuracy, recall, or F1 on individual classes, these metrics reflect more narrow aspects of performance. For example, recall for the churn class may be higher in SVM, meaning that the model catches more churners, but it does so at the cost of lower precision or overall separation ability. Similarly, a model may appear strong on accuracy, but accuracy is biased toward the majority class and does not reflect the decision boundary's quality.
+
+XGBoost strikes the best balance between identifying churners and avoiding excessive false alarms. Its superior AUC shows that it consistently ranks risky customers above safe ones across all possible classification thresholds. Combined with strong cross-validated performance, stable generalization, and explainability through SHAP values, the tuned XGBoost model is the most reliable and actionable choice for churn prediction in this dataset.
 
 
+## 8. Business Insights
+To translate model results into actionable business decisions, we rely on the SHAP analysis generated from the tuned XGBoost model.
 
+![XGB SHAP](report/figures/best_xgb_shap.png)
 
+The SHAP values reveal several high-risk customer segments.
 
+- Short-tenure customers (0–10 months)
+- Customers on month-to-month or no-contract plans
+- Customers paying via electronic check
+- High monthly charges customers
+- Fiber optic internet users without tech support or security add-ons
+
+Based on these findings, several targeted retention strategies can be recommended. 
+1. For new customers with short tenure, early-lifecycle engagement programs—such as onboarding support, check-in calls, or personalized usage tips—can stabilize their experience and reduce early churn.
+2. High-risk payment method users, particularly those paying via electronic check, may benefit from incentives to switch to more stable and automated payment options.
+3. Customers on month-to-month contracts could be offered contract upgrade discounts, loyalty points, or bundled service packages to encourage longer commitments.
+4. For users with high monthly charges or dissatisfaction with fiber optic plans, companies can consider transparent billing reviews, speed audits, or temporary bill credits to mitigate perceived cost-value imbalance.
+5. Customers lacking tech support or security add-ons represent an opportunity for value-added bundle promotions, which not only increase perceived service quality but also improve stickiness.
 
