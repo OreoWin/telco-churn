@@ -42,32 +42,27 @@ This imbalance is common in churn problems and motivates the use of AUC, recall,
 
 ![Churn Distribution](report/figures/EDA_Churn_distribution_colored.png)
 
-—
-##3.2 Distribution of Numeric Variables
+---
+## 3.2 Distribution of Numeric Variables
+
 We examine three key numeric variables:
-MonthlyCharges
 
-
-tenure
-
-
-TotalCharges
-
+- MonthlyCharges
+- tenure
+- TotalCharges
 
 Observations:
-Tenure has a reverse-J shape, typical in telecom retention patterns.
 
+- Tenure has a reverse-J shape, typical in telecom retention patterns.
+- TotalCharges is positively skewed, consistent with long-tenure customers accumulating more charges.
+- MonthlyCharges has a fairly uniform spread.
 
-TotalCharges is positively skewed, consistent with long-tenure customers accumulating more charges.
-
-
-MonthlyCharges has a fairly uniform spread.
-![Numeric Variable Distribution](report/figures/EDA_Numerical_distribution_colored.png)
+![Numeric Variable Distribution](report/figures/EDA_Distribution_Numerical_colored.png)
 
 
 ---
 
-# 4. Logistic Regression (Baseline Model)
+# 4. Logistic Regression 
 
 Logistic Regression is used as the baseline because it offers strong interpretability and sets a reference point for more complex models such as XGBoost and SVM.
 
@@ -114,6 +109,7 @@ precision    recall  f1-score   support
       1407
 weighted avg       0.53      0.27      0.14      1407
 ```
+
 Logistic Regression performed very poorly in this churn prediction task, even with balanced class weight and standardized numeric variables. The model achieved an AUC of 0.41, far below acceptable baseline performance, and the classification report shows extreme imbalance in prediction behavior:
 
 - It almost always predicts the minority class (churn = 1)
@@ -124,7 +120,7 @@ This happens because the decision boundary in churn data is highly nonlinear and
 
 ---
 
-# 5. XGBoost Modelling
+# 5. XGBoost 
 
 XGBoost is a tree-based gradient boosting algorithm known for its strong performance on tabular datasets.  
 In churn prediction tasks, it often outperforms linear models by capturing nonlinear interactions between features such as tenure, contract type, and billing behavior.
@@ -133,27 +129,137 @@ We evaluate two variants:
 1. **Baseline XGBoost**
 2. **Tuned XGBoost (GridSearchCV)**
 
----
-
 ## 5.1 Baseline XGBoost
 
 The baseline model uses default hyperparameters.  
 This provides a reference to evaluate how much tuning improves performance.
 
+```python
+X_train_xgb = X_train  
+X_test_xgb = X_test
+
+# handle imbalance: ratio = (# non-churn) / (# churn)
+neg, pos = y_train.value_counts()
+scale_pos_weight = neg / pos
+print("scale_pos_weight:", scale_pos_weight) #2.76
+
+
+xgb_model = XGBClassifier(
+    n_estimators=300, #number of trees
+    learning_rate=0.05,#prevent overfitting
+    max_depth=5, #depth of each tree
+    subsample=0.8, #fraction of samples used for each tree
+    colsample_bytree=0.8, #fraction of features used for each tree
+    scale_pos_weight=scale_pos_weight,   # imbalance correction
+    eval_metric="logloss",
+    random_state=42
+)
+
+xgb_model.fit(X_train_xgb, y_train)
+
+y_pred_xgb = xgb_model.predict(X_test_xgb)
+y_pred_prob_xgb = xgb_model.predict_proba(X_test_xgb)[:, 1]
+
+print("XGBoost ROC AUC:", roc_auc_score(y_test, y_pred_prob_xgb))
+print(classification_report(y_test, y_pred_xgb))
+```
+To address churn imbalance, we computed scale_pos_weight as the ratio of non-churn to churn customers (2.76), allowing the model to penalize mistakes on the minority class more heavily. We selected 300 trees with a conservative learning rate of 0.05 to reduce overfitting while giving the model enough boosting rounds to learn complex patterns. A tree depth of 5 captures nonlinear relationships without becoming overly complex, and both subsample=0.8 and colsample_bytree=0.8 introduce stochastic regularization that improves generalization.
+
+```text
+ XGBoost ROC AUC: 0.8262433284499225
+```
+The baseline XGBoost model already performed strongly, achieving an AUC of 0.826, confirming that tree-based boosting methods are well-suited for capturing the nonlinear structure of churn data. However, XGBoost contains many hyperparameters that control tree depth, learning rate, subsampling, and feature sampling—each of which can meaningfully influence model complexity and generalization. To push performance further and systematically explore these interactions, we conducted an extensive hyperparameter search using GridSearchCV.
+
+
 ## 5.2 XGBoost Hyperparameter Tuning (GridSearchCV)
 
 Tuning aims to balance bias–variance tradeoff and improve generalization.
 
-## 5.3 Model Evaluation 
+Several approaches can be used for hyperparameter tuning in machine learning models:
+1. GridSearchCV – Exhaustively evaluates all combinations of hyperparameters across a predefined search grid using cross-validation. It is stable, fully reproducible, and easy to interpret.
+2. RandomizedSearchCV – Samples a fixed number of random hyperparameter combinations from specified distributions. It is faster and suitable for large search spaces, but does not guarantee testing all meaningful combinations.
+3. Bayesian Optimization frameworks (e.g., Optuna, Hyperopt) – Use past evaluation results to intelligently suggest the next promising hyperparameter set. These methods are highly efficient for very large or complex search spaces but introduce more complexity and less transparency.
+For this churn prediction project, GridSearchCV is the most appropriate choice because:
+- The dataset is medium-sized, and XGBoost training is relatively fast.
+- Our hyperparameter space is deliberately small and well-defined.
+- Exhaustive search provides deterministic, interpretable, and reproducible results.
+- It allows us to clearly demonstrate the tuning process in a way that aligns with industry-standard practices and makes the methodology easy to communicate in interviews or documentation.
 
-## 5.4 Model Interpretation 
+The cross-validation step in GridSearchCV plays a key role here: instead of fitting parameters purely to the training split—which risks overfitting—CV repeatedly evaluates each parameter combination across multiple folds of the training data. This ensures the selected hyperparameters consistently perform well on unseen data, resulting in a more stable and reliable model.
+
+```python
+param_grid = {
+    "max_depth": [3, 5, 7],
+    "learning_rate": [0.05, 0.1],
+    "n_estimators": [200, 400],
+    "subsample": [0.8, 1.0],
+    "colsample_bytree": [0.8, 1.0],
+}
+
+grid_search = GridSearchCV(
+    estimator=xgb_model,
+    param_grid=param_grid,
+    scoring="roc_auc",
+    cv=3,
+    n_jobs=-1,
+    verbose=1
+)
+
+grid_search.fit(X_train_xgb, y_train)
+
+print("Best params:", grid_search.best_params_)
+```
+```text
+{'colsample_bytree': 0.8, 'learning_rate': 0.05, 'max_depth': 3, 'n_estimators': 200, 'subsample': 0.8}
+```
+From GridSearchCV, we obtained the best parameters for XGBoost, which are: 
+
+max_depth = 3
+- Shallower trees reduce model complexity and prevent overfitting, especially important in tabular datasets with correlated features.
+
+learning_rate = 0.05
+- A small learning rate provides more stable, incremental updates and improves generalization by preventing overly aggressive boosting steps.
+
+n_estimators = 200
+- Enough boosting rounds to capture meaningful nonlinear patterns without introducing excessive noise or training instability.
+
+subsample = 0.8
+- Uses 80% of the training samples per tree, adding randomness that reduces variance and prevents overfitting.
+
+colsample_bytree = 0.8
+- Samples 80% of the features for each tree, improving robustness and reducing reliance on any single feature subset.
+
+After tuning XGBoost with GridSearchCV and applying the optimized model to the test set, we achieved an AUC of 0.839, which is slightly higher than the baseline XGBoost model (AUC ≈ 0.826). This improvement indicates that the tuned hyperparameters helped the model generalize better by balancing model complexity and regularization.
+```text
+Test ROC AUC (best XGB): 0.8385031914728401
+
+              precision    recall  f1-score   support
+           0       0.91      0.70      0.79      1033
+           1       0.49      0.80      0.61       374
+
+    accuracy                           0.73      1407
+   macro avg       0.70      0.75      0.70      1407
+weighted avg       0.80      0.73      0.74      1407
+```
+
+## 5.3 Model Interpretation 
+
+The SHAP feature importance plot shows that the tuned XGBoost model relies primarily on tenure, contract type, and internet service type to make churn predictions. Tenure is by far the most influential variable, followed by long-term contract indicators (One-year, Two-year), highlighting how customer retention is strongly linked to subscription duration and contractual commitment. Features such as Electronic Check, Monthly Charges, Online Security, and Fiber Optic service also have substantial importance, indicating that both billing behaviors and service configurations affect churn risk. The dominance of these variables confirms that churn is shaped by a combination of service stability, pricing, and customer habits — and that linear models cannot adequately capture these nonlinear relationships.
+
+![SHAP feature importance](report/figures/best_xgb_shap_bar.png)
+
+The SHAP dependence plot for tenure reveals a clear, monotonic pattern: churn probability sharply decreases as tenure increases. Customers with extremely short tenure (0–10 months) exhibit high positive SHAP values, meaning they contribute strongly toward churn predictions. As tenure increases beyond ~20 months, SHAP values rapidly drop below zero, indicating much lower churn risk. This aligns with real-world business intuition — new customers are far more volatile, while long-standing subscribers are substantially more stable. The effect is smooth, continuous, and strongly nonlinear, which is exactly the kind of pattern tree-based models like XGBoost excel at capturing.
+
+![SHAP dependece](report/figures/best_xgb_tenure.png)
+
+Overlaying MonthlyCharges as a color gradient further exposes interaction effects: within the same tenure range, customers with higher monthly charges tend to have slightly higher SHAP values (i.e., higher churn risk). This indicates that churn is not driven by tenure alone but by the interaction between how long the customer has stayed and how much they are paying. XGBoost naturally captures these multidimensional relationships without requiring manual feature engineering.
 
 ---
 
-# 6. Support Vector Machine (SVM) Modelling 
+# 6. Support Vector Machine (SVM)  
 
 SVM is a margin-based classifier that uses kernel transformations to identify nonlinear patterns in the churn data.  
-Because SVM is highly sensitive to magnitudes of features, **standardization is required** to ensure balanced treatment across variables.
+Because SVM is highly sensitive to magnitudes of features, standardization is required to ensure balanced treatment across variables.
 
 We evaluate:
 1. **Baseline SVM**
@@ -179,11 +285,126 @@ From EDA, we observed that customer churn patterns are rarely linearly separable
 - consistently performs well in practical churn prediction tasks
 For these reasons, we select the RBF kernel as the primary kernel for our SVM model.
 
+```python
+X_train_svm = X_train_scaled
+X_test_svm = X_test_scaled
+
+svm_rbf = SVC(
+    kernel="rbf",
+    C=1.0,             # default
+    gamma="scale",      # default RBF gamma
+    probability=True,   # needed for AUC
+    class_weight="balanced",  # important for imbalanced churn data
+    random_state=42
+)
+
+svm_rbf.fit(X_train_svm, y_train)
+
+y_pred_svm = svm_rbf.predict(X_test_svm)
+y_pred_svm_prob = svm_rbf.predict_proba(X_test_svm)[:, 1]
+
+print("SVM (RBF) ROC AUC:", roc_auc_score(y_test, y_pred_svm_prob)) #0.81
+print(classification_report(y_test, y_pred_svm))
+```
+These defaults provide a balanced starting point for nonlinear classification problems. The RBF kernel is particularly suitable for churn modeling because it allows the classifier to capture curved, nonlinear boundaries in the feature space — a critical requirement given the complex interactions among tenure, contract type, monthly billing, and service usage patterns. Using class_weight='balanced' helps compensate for the dataset’s churn imbalance by assigning a higher penalty to misclassifying the minority class. Setting probability=True enables probability outputs needed for AUC evaluation, while scaling the numeric features ensures each variable contributes proportionally to the decision boundary.
+
+```text
+SVM (RBF) ROC AUC: 0.8100685403088456
+
+              precision    recall  f1-score   support
+           0       0.90      0.71      0.79      1033
+           1       0.49      0.78      0.60       374
+
+    accuracy                           0.73      1407
+   macro avg       0.70      0.75      0.70      1407
+weighted avg       0.79      0.73      0.74      1407
+```
+Using these default settings, the baseline SVM achieved an AUC of 0.81, indicating that the model is capable of capturing meaningful nonlinear structure in the churn data. While this performance is lower than the tuned XGBoost model, it still significantly outperforms logistic regression and validates the need for nonlinear modeling techniques. The recall on the churn class is notably higher than that of logistic regression, demonstrating SVM’s ability to detect high-risk customers more effectively.
+
 ## 6.2 Hyperparameter Tuning for SVM (GridSearchCV)
 
-## 6.3 Model Evaluation 
+```python
+param_grid_svm = {
+    "C": [0.1, 1, 10, 50],
+    "gamma": ["scale", 0.01, 0.001],
+    "kernel": ["rbf"],
+    "class_weight": ["balanced"]
+}
 
-## 6.4 Model Interpretation 
+svm_grid = GridSearchCV(
+    estimator=svm_rbf,
+    param_grid=param_grid_svm,
+    scoring="roc_auc",
+    cv=3,
+    n_jobs=-1,
+    verbose=1
+)
+
+svm_grid.fit(X_train_svm, y_train)
+
+print("Best SVM params:", svm_grid.best_params_)
+print("Best CV ROC AUC:", svm_grid.best_score_) #0.843
+
+best_svm = svm_grid.best_estimator_
+
+y_pred_best_svm = best_svm.predict(X_test_svm)
+y_pred_best_svm_prob = best_svm.predict_proba(X_test_svm)[:, 1]
+
+print("Test ROC AUC (best SVM):", roc_auc_score(y_test, y_pred_best_svm_prob)) #0.833
+print(classification_report(y_test, y_pred_best_svm))
+```
+
+```text
+Best SVM params: {'C': 1, 'class_weight': 'balanced', 'gamma': 0.01, 'kernel': 'rbf'}
+Best CV ROC AUC: 0.8433010701115834
+Test ROC AUC (best SVM): 0.8327375744806415
+
+              precision    recall  f1-score   support
+           0       0.91      0.69      0.79      1033
+           1       0.49      0.81      0.61       374
+
+    accuracy                           0.72      1407
+   macro avg       0.70      0.75      0.70      1407
+weighted avg       0.80      0.72      0.74      1407
+
+Support vectors per class: [2281  833]
+Total support vectors: 3114
+Percentage of support vectors: 55.36%
+
+```
+After tuning SVM with GridSearchCV and applying the optimized model to the test set, we achieved an AUC of 0.833.
+
+
+## 6.3 Model Interpretation 
+
+A. Support Vector Count
+
+Support vectors define the SVM decision boundary, so examining how many are used gives insight into model complexity.
+In the tuned SVM model, we obtained 3,114 support vectors, representing 55.36% of the entire training set. This is a relatively high proportion, which indicates that the decision boundary is complex and relies on many observations near the margin. A smooth, simple boundary would require far fewer support vectors, while a highly flexible boundary—like the one observed here—requires many points to define the separating surface. This reinforces the idea that churn data contains substantial overlap between classes and that the model needs a large fraction of training examples to correctly capture these nonlinear patterns.
+
+B. Margin Analysis (Conceptual)
+
+SVM aims to find the hyperplane that maximizes the margin between churn and non-churn classes.
+The margin width is controlled largely by the C parameter:
+
+Small C → wide margin → simpler, more generalizable boundary
+
+Large C → narrow margin → highly flexible boundary, higher risk of overfitting
+
+Our tuned model selected C = 1, which is relatively moderate. This indicates that the model balances between margin width and fitting complex patterns. It does not collapse into overly narrow margins (which would memorize noise), nor does it enforce excessively wide margins (which might underfit). The chosen C value reflects that churn data requires a boundary that is flexible but still regularized, consistent with the high overlap and class imbalance in the dataset.
+
+C. Decision Function Distribution
+
+The decision function measures how far each sample lies from the SVM decision boundary.
+By plotting the distribution of decision_function scores for churn vs. non-churn customers, we can visualize how confidently the model separates the two classes:
+
+- Scores far from zero indicate confident predictions
+- Scores near zero indicate samples lying close to the margin, which are harder to classify
+- Overlap between churn and non-churn distributions reflects intrinsic ambiguity in the data
+
+![SVM](report/figures/SVM_decision_function_distribution.png)
+
+In our plot, the churn and non-churn groups show partial overlap, illustrating why the model relies on a large number of support vectors. The distribution also reveals that SVM assigns more extreme scores to high-confidence churn cases, which helps explain the model’s relatively strong recall for the minority class. This diagnostic provides intuition about how the SVM “thinks” and how sharply (or loosely) it separates the two groups.
 
 ---
 
