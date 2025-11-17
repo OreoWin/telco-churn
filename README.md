@@ -11,7 +11,7 @@ This project analyzes churn patterns in a Telco subscription dataset using:
 - **Python** for modelling Logistic Regression, XGBoost, and SVM  
 - **Goal:** Identify key churn drivers, build predictive models, and provide actionable business insights.
 
----
+
 
 # 2. Data Overview
 
@@ -19,7 +19,7 @@ The [TELCO Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/tel
 
 Target variable: **Churn (Yes/No)**.
 
----
+
 
 # 3. Exploratory Data Analysis (R)
 
@@ -28,7 +28,7 @@ Key findings highlight imbalances in churn rates, differences in distributions o
 
 
 
----
+
 
 ## 3.1 Churn Distribution
 
@@ -42,7 +42,7 @@ This imbalance is common in churn problems and motivates the use of AUC, recall,
 
 ![Churn Distribution](report/figures/EDA_Churn_distribution_colored.png)
 
----
+
 ## 3.2 Distribution of Numeric Variables
 
 We examine three key numeric variables:
@@ -60,7 +60,7 @@ Observations:
 ![Numeric Variable Distribution](report/figures/EDA_Distribution_Numerical_colored.png)
 
 
----
+
 
 # 4. Logistic Regression 
 
@@ -118,7 +118,7 @@ Logistic Regression performed very poorly in this churn prediction task, even wi
 
 This happens because the decision boundary in churn data is highly nonlinear and cannot be captured by a linear model like Logistic Regression. The Telco churn dataset contains complex interactions between contract type, tenure, services, and billing features—patterns that linear models cannot express. As a result, Logistic Regression collapses into a degenerate classifier and fails to generalize, confirming the need for more flexible models such as XGBoost or SVM.
 
----
+
 
 # 5. XGBoost 
 
@@ -265,7 +265,7 @@ We evaluate:
 1. **Baseline SVM**
 2. **Tuned SVM (C, gamma GridSearchCV)**
 
----
+
 
 ## 6.1 Baseline SVM
 
@@ -406,7 +406,7 @@ By plotting the distribution of decision_function scores for churn vs. non-churn
 
 In our plot, the churn and non-churn groups show partial overlap, illustrating why the model relies on a large number of support vectors. The distribution also reveals that SVM assigns more extreme scores to high-confidence churn cases, which helps explain the model’s relatively strong recall for the minority class. This diagnostic provides intuition about how the SVM “thinks” and how sharply (or loosely) it separates the two groups.
 
----
+
 
 ## 7. Model Comparison 
 ![Model Comparison](report/figures/model_comparison.png)
