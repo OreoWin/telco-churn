@@ -39,7 +39,7 @@ The dataset is imbalanced:
 - **73.4%** customers did **not** churn  
 - **26.6%** customers **did** churn  
 
-This imbalance is common in churn problems and motivates the use of AUC, recall, and precision instead of relying solely on accuracy.
+This imbalance is common in churn problems and motivates the use of AUC, recall, and precision instead of relying solely on accuracy. Because of that, we adopt XGBoost model since it works well with imbalances.
 
 ### **Plot: Churn Distribution**
 
@@ -103,6 +103,8 @@ print(classification_report(y_test, y_pred))
 
 
 ```
+By using balanced class weight in logistic regression, we treat churners as more important because there are fewer of them. In other words, churners get more weight, non-churners get less weight. It helps to increase recall of churners, avoid the predict-all-0 trap, and reduce the effect of imbalance. 
+
 ```text
 ROC AUC: 0.4126848750588857
 
@@ -115,6 +117,13 @@ precision    recall  f1-score   support
       1407
 weighted avg       0.53      0.27      0.14      1407
 ```
+Logistic Regression performed very poorly in this churn prediction task, even with balanced class weight and standardized numeric variables. The model achieved an AUC of 0.41, far below acceptable baseline performance, and the classification report shows extreme imbalance in prediction behavior:
+
+- It almost always predicts the minority class (churn = 1)
+- Recall for non-churn customers is 0.02, meaning it completely fails to recognize the majority class
+- Accuracy is only 27%, far below the majority baseline of ~73%
+
+This happens because the decision boundary in churn data is highly nonlinear and cannot be captured by a linear model like Logistic Regression. The Telco churn dataset contains complex interactions between contract type, tenure, services, and billing features—patterns that linear models cannot express. As a result, Logistic Regression collapses into a degenerate classifier and fails to generalize, confirming the need for more flexible models such as XGBoost or SVM.
 
 ---
 
