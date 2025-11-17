@@ -15,7 +15,10 @@ This project analyzes churn patterns in a Telco subscription dataset using:
 
 # 2. Data Overview
 
-The Telco Customer Churn dataset contains 7,043 customer records and 21 variables describing customer demographics, service subscriptions, contractual attributes, monthly billing, and a binary churn label. The dataset includes both numerical features (e.g., tenure, MonthlyCharges, TotalCharges) and multiple categorical variables related to phone, internet, and streaming services. 
+The
+ [TELCO Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn/data)
+
+ contains 7,043 customer records and 21 variables describing customer demographics, service subscriptions, contractual attributes, monthly billing, and a binary churn label. The dataset includes both numerical features (e.g., tenure, MonthlyCharges, TotalCharges) and multiple categorical variables related to phone, internet, and streaming services. 
 
 Target variable: **Churn (Yes/No)**.
 
@@ -23,20 +26,47 @@ Target variable: **Churn (Yes/No)**.
 
 # 3. Exploratory Data Analysis (R)
 
-EDA was conducted using `tidyverse` and `ggplot2`.  
-Key findings:
-
-- Customers with **Month-to-Month** contracts churn at the highest rate.  
-- **Short-tenure** customers are significantly more likely to churn.  
-- Customers using **electronic check** payment show higher churn risk.  
-- Senior citizens have a slightly higher churn probability.  
+EDA was conducted in **R (tidyverse + ggplot2)** to understand customer behavior and identify early indicators of churn.  
+Key findings highlight imbalances in churn rates, differences in distributions of numeric variables, and a clear separation between churn and non-churn groups.
 
 
 
-```r
-ggplot(df, aes(tenure, fill = Churn)) +
-    geom_histogram(position = "dodge", bins = 30)
-```
+---
+
+## 3.1 Churn Distribution
+
+The dataset is imbalanced:  
+- **73.4%** customers did **not** churn  
+- **26.6%** customers **did** churn  
+
+This imbalance is common in churn problems and motivates the use of AUC, recall, and precision instead of relying solely on accuracy.
+
+### **Plot: Churn Distribution**
+
+![Churn Distribution](report/figures/EDA_Churn_distribution_colored.png)
+
+—
+##3.2 Distribution of Numeric Variables
+We examine three key numeric variables:
+MonthlyCharges
+
+
+tenure
+
+
+TotalCharges
+
+
+Observations:
+Tenure has a reverse-J shape, typical in telecom retention patterns.
+
+
+TotalCharges is positively skewed, consistent with long-tenure customers accumulating more charges.
+
+
+MonthlyCharges has a fairly uniform spread.
+![Numeric Variable Distribution](report/figures/EDA_Numerical_distribution_colored.png)
+
 
 ---
 
@@ -50,19 +80,40 @@ Logistic Regression is used as the baseline because it offers strong interpretab
 - Trained on train split  
 - Evaluated on test split using accuracy, AUC, precision, recall, and F1  
 
-### **Python Code (Baseline)**
 
 ```python
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, classification_report
+log_reg = LogisticRegression(
+    max_iter=1000,
+    class_weight="balanced",    
+    penalty="l2",
+    random_state=42
+)
 
-logreg = LogisticRegression(max_iter=2000)
-logreg.fit(X_train_scaled, y_train)
-y_pred = logreg.predict(X_test_scaled)
-y_prob = logreg.predict_proba(X_test_scaled)[:, 1]
 
-print("AUC:", roc_auc_score(y_test, y_prob))
+log_reg.fit(X_train_scaled, y_train)
+
+
+y_pred = log_reg.predict(X_test)
+y_pred_prob = log_reg.predict_proba(X_test)[:, 1]
+
+
+print("ROC AUC:", roc_auc_score(y_test, y_pred_prob))
 print(classification_report(y_test, y_pred))
+
+
+
+```
+```text
+ROC AUC: 0.4126848750588857
+
+precision    recall  f1-score   support
+
+           0       0.63      0.02      0.04      1033
+           1       0.26      0.97      0.41       374
+
+    accuracy                           0.27      1407
+      1407
+weighted avg       0.53      0.27      0.14      1407
 ```
 
 ---
@@ -132,6 +183,7 @@ For these reasons, we select the RBF kernel as the primary kernel for our SVM mo
 
 ## 7. Model Comparison 
 ![Model Comparison](report/figures/model_comparison.png)
+
 
 
 
