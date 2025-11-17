@@ -3,7 +3,7 @@
 
 # 1. Introduction
 
-Customer churn — the loss of existing subscribers — represents a major revenue risk for telecommunications companies. The goal of this project is to understand the behavioral and service-related factors driving churn, and provide modeling-ready insights for future predictive analysis (XGBoost & SVM). By examining distributions, feature relationships, and churn patterns, we aim to identify high-risk customer groups and actionable levers for churn reduction.
+Customer churn — the loss of existing subscribers — represents a major revenue risk for telecommunications companies. The goal of this project is to understand the behavioral and service-related factors driving churn, and provide modeling-ready insights for future predictive analysis (Logistic Regression & XGBoost & SVM). By examining distributions, feature relationships, and churn patterns, we aim to identify high-risk customer groups and actionable levers for churn reduction.
 
 This project analyzes churn patterns in a Telco subscription dataset using:
 
