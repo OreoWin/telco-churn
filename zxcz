@@ -1,0 +1,34 @@
+gender_gap <- read.csv("C:/Users/lenovo/Desktop/gender_gap.csv")
+library(tidyverse)
+
+glimpse(gender_gap)   
+summary(gender_gap)
+sum(is.na(gender_gap))
+colSums(is.na(gender_gap))
+
+summarized <- gender_gap %>%
+  group_by(sex, year) %>%
+  summarise(
+    estimate = mean(employed),
+    .groups = "drop"
+  ) #只要用summarise()固定后面加.group = 'drop'
+
+dim(summarized)
+
+#change names 
+colnames(summarized)[names(summarized) =='sex'] = 'Gender'
+colnames(summarized) = c('Gender','Year','Estimate')
+
+summarized$Estimate=summarized$Estimate * 100
+## Visualization 
+my_plot <- ggplot(
+  data = summarized,
+  mapping = aes(x = Year,
+                y = Estimate,
+                color = Gender)
+) + geom_line()+ 
+  labs(title = "plot",
+       x = 'Year',
+       y = '% Estimate')
+
+print(my_plot)
